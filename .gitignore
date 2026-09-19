@@ -1,0 +1,8 @@
+.env
+data/
+__pycache__/
+*.pyc
+.DS_Store
+btc-monitor-dashboard-update.tar.gz
+build_log.txt
+scripts/dashboard/static/cache/

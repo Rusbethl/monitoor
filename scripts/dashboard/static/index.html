@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BTC Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ===== Header ===== -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="brand-mark">₿</span>
+      <span class="brand-name">BTC Monitor</span>
+      <span class="live-dot" title="Actualización automática"></span>
+    </div>
+
+    <div class="ticker" id="ticker">
+      <div class="ticker-pill ticker-price">
+        <span class="ticker-label">BTC/USDT</span>
+        <span class="ticker-value" id="tk-price">—</span>
+        <span class="ticker-change" id="tk-change">—</span>
+      </div>
+      <div class="ticker-pill">
+        <span class="ticker-label">Funding</span>
+        <span class="ticker-value" id="tk-funding">—</span>
+      </div>
+      <div class="ticker-pill state-pill" id="tk-state">
+        <span class="state-dot"></span>
+        <span id="tk-state-label">—</span>
+      </div>
+    </div>
+
+    <div class="ticker-pill theme-pill">
+      <span class="ticker-label">Tema</span>
+      <select id="theme-select" class="theme-select" title="Elegir paleta de colores">
+        <option value="dark">Oscuro</option>
+        <option value="light">Claro</option>
+        <option value="blue">Azul noche</option>
+        <option value="amber">Ámbar terminal</option>
+      </select>
+    </div>
+
+    <div class="topbar-meta">
+      <span id="last-update">Cargando…</span>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <!-- ===== Últimas (scroll strip) ===== -->
+    <section class="section" aria-label="Últimas noticias">
+      <div class="section-head">
+        <h2>Últimas</h2>
+        <button class="btn-refresh" id="btn-refresh-news" title="Actualizar noticias">
+          <svg class="icon-refresh" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M17.65 6.35A8 8 0 1 0 19.9 13h-2.1a6 6 0 1 1-1.42-6.22L13 10h7V3l-2.35 3.35Z"/></svg>
+          <span>Actualizar</span>
+        </button>
+      </div>
+      <div class="strip" id="news-strip">
+        <div class="skeleton-row"><div class="skel skel-strip"></div><div class="skel skel-strip"></div><div class="skel skel-strip"></div><div class="skel skel-strip"></div><div class="skel skel-strip"></div></div>
+      </div>
+    </section>
+
+    <!-- ===== Destacadas (hero + lista) ===== -->
+    <section class="section" aria-label="Noticias destacadas">
+      <div class="section-head">
+        <h2>Destacadas</h2>
+        <span class="section-sub" id="news-count"></span>
+      </div>
+      <div class="featured-grid" id="featured-grid">
+        <div class="skel skel-featured"></div>
+        <div class="featured-list">
+          <div class="skel skel-list-item"></div>
+          <div class="skel skel-list-item"></div>
+          <div class="skel skel-list-item"></div>
+          <div class="skel skel-list-item"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Más noticias ===== -->
+    <section class="section" aria-label="Más noticias">
+      <div class="section-head">
+        <h2>Más noticias</h2>
+      </div>
+      <div class="news-grid" id="news-grid">
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+      </div>
+      <div class="more-news-wrap">
+        <button class="btn-refresh" id="btn-more-news" style="display:none;">
+          <span>Ver más noticias</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===== Mercado (simplificado) ===== -->
+    <section class="section" aria-label="Mercado">
+      <div class="section-head">
+        <h2>Mercado</h2>
+        <span class="section-sub">Vista simple — el bot te avisa por Telegram si algo requiere tu atención</span>
+      </div>
+      <div class="market-card">
+        <div class="market-chart-wrap">
+          <canvas id="chart-price" height="90"></canvas>
+        </div>
+        <div class="market-stats">
+          <div class="stat-block">
+            <span class="stat-label">Precio</span>
+            <span class="stat-value" id="m-price">—</span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-label">Funding</span>
+            <span class="stat-value" id="m-funding">—</span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-label">Estado (RSI 1h)</span>
+            <span class="stat-value state-badge" id="m-state">—</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Actividad ===== -->
+    <section class="section" aria-label="Actividad">
+      <div class="section-head">
+        <h2>Actividad</h2>
+      </div>
+      <div class="activity-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-icon">🔔</span>
+            <span>Alertas</span>
+          </div>
+          <div class="panel-body" id="alerts-list">
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-icon">🐋</span>
+            <span>Whale trades</span>
+          </div>
+          <div class="panel-body" id="whales-list">
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Radar (calendario + rumores, con más espacio) ===== -->
+    <section class="section" aria-label="Radar">
+      <div class="section-head">
+        <h2>Radar</h2>
+        <span class="section-sub">Lo que puede mover el mercado, aunque aún no sea seguro</span>
+      </div>
+      <div class="radar-grid">
+        <div class="panel panel-lg">
+          <div class="panel-head">
+            <span class="panel-icon">📅</span>
+            <span>Calendario económico</span>
+          </div>
+          <div class="panel-body" id="calendar-list">
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+          </div>
+        </div>
+
+        <div class="panel panel-lg">
+          <div class="panel-head">
+            <span class="panel-icon">🗣️</span>
+            <span>Rumores</span>
+            <span class="section-sub panel-head-sub">se retiran solos después de 72h</span>
+          </div>
+          <div class="panel-body" id="rumors-list">
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <span>BTC Monitor — datos locales, actualización automática. No es asesoría financiera.</span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
