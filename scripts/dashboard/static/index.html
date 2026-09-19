@@ -33,6 +33,10 @@
         <span class="state-dot"></span>
         <span id="tk-state-label">—</span>
       </div>
+      <div class="ticker-pill fng-pill" id="tk-fng" title="Índice Fear &amp; Greed del mercado cripto (alternative.me)">
+        <span class="ticker-label">Fear &amp; Greed</span>
+        <span class="ticker-value" id="tk-fng-value">—</span>
+      </div>
     </div>
 
     <div class="ticker-pill theme-pill">
@@ -72,6 +76,14 @@
         <h2>Destacadas</h2>
         <span class="section-sub" id="news-count"></span>
       </div>
+      <div class="filter-chips" id="news-filters">
+        <button class="chip active" data-filter="all">Todas</button>
+        <button class="chip chip-bitcoin" data-filter="bitcoin">₿ Bitcoin</button>
+        <button class="chip chip-macro" data-filter="macro">🌐 Macro</button>
+        <button class="chip chip-regulacion" data-filter="regulacion">⚖️ Regulación</button>
+        <button class="chip chip-exchange" data-filter="exchange">🔁 Exchange</button>
+        <button class="chip chip-rumor" data-filter="rumor">🗣️ Rumores</button>
+      </div>
       <div class="featured-grid" id="featured-grid">
         <div class="skel skel-featured"></div>
         <div class="featured-list">
@@ -103,65 +115,6 @@
       </div>
     </section>
 
-    <!-- ===== Mercado (simplificado) ===== -->
-    <section class="section" aria-label="Mercado">
-      <div class="section-head">
-        <h2>Mercado</h2>
-        <span class="section-sub">Vista simple — el bot te avisa por Telegram si algo requiere tu atención</span>
-      </div>
-      <div class="market-card">
-        <div class="market-chart-wrap">
-          <canvas id="chart-price" height="90"></canvas>
-        </div>
-        <div class="market-stats">
-          <div class="stat-block">
-            <span class="stat-label">Precio</span>
-            <span class="stat-value" id="m-price">—</span>
-          </div>
-          <div class="stat-block">
-            <span class="stat-label">Funding</span>
-            <span class="stat-value" id="m-funding">—</span>
-          </div>
-          <div class="stat-block">
-            <span class="stat-label">Estado (RSI 1h)</span>
-            <span class="stat-value state-badge" id="m-state">—</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Actividad ===== -->
-    <section class="section" aria-label="Actividad">
-      <div class="section-head">
-        <h2>Actividad</h2>
-      </div>
-      <div class="activity-grid">
-        <div class="panel">
-          <div class="panel-head">
-            <span class="panel-icon">🔔</span>
-            <span>Alertas</span>
-          </div>
-          <div class="panel-body" id="alerts-list">
-            <div class="skel skel-line"></div>
-            <div class="skel skel-line"></div>
-            <div class="skel skel-line"></div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head">
-            <span class="panel-icon">🐋</span>
-            <span>Whale trades</span>
-          </div>
-          <div class="panel-body" id="whales-list">
-            <div class="skel skel-line"></div>
-            <div class="skel skel-line"></div>
-            <div class="skel skel-line"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- ===== Radar (calendario + rumores, con más espacio) ===== -->
     <section class="section" aria-label="Radar">
       <div class="section-head">
@@ -188,6 +141,66 @@
             <span class="section-sub panel-head-sub">se retiran solos después de 72h</span>
           </div>
           <div class="panel-body" id="rumors-list">
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Datos técnicos (opcional — hasta abajo, el bot ya interpreta esto) ===== -->
+    <section class="section section-secondary" aria-label="Datos técnicos">
+      <div class="section-head">
+        <h2>Datos técnicos</h2>
+        <span class="section-sub">Referencia opcional — el bot ya vigila esto y te avisa por Telegram cuando importa</span>
+      </div>
+
+      <div class="market-card">
+        <div class="market-chart-wrap">
+          <canvas id="chart-price" height="90"></canvas>
+        </div>
+        <div class="market-stats">
+          <div class="stat-block">
+            <span class="stat-label">Precio</span>
+            <span class="stat-value" id="m-price">—</span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-label">Funding</span>
+            <span class="stat-value" id="m-funding">—</span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-label">Estado (RSI 1h)</span>
+            <span class="stat-value state-badge" id="m-state">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="activity-grid" style="margin-top: 14px;">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-icon">🔔</span>
+            <span>Alertas</span>
+            <span class="section-sub panel-head-sub">cuando el RSI cruza sobrecompra/sobreventa</span>
+          </div>
+          <div class="panel-body" id="alerts-list">
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+            <div class="skel skel-line"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-icon">🐋</span>
+            <span>Whale trades</span>
+          </div>
+          <p class="panel-note">
+            Operaciones individuales &gt; $500k detectadas en Binance Futures. Es un dato crudo,
+            no una señal de compra/venta: puede ser un exchange moviendo fondos propios, no
+            necesariamente una apuesta direccional. Úsalo como contexto, no como instrucción.
+          </p>
+          <div class="panel-body" id="whales-list">
             <div class="skel skel-line"></div>
             <div class="skel skel-line"></div>
             <div class="skel skel-line"></div>

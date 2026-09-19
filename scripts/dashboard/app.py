@@ -67,6 +67,26 @@ def query(sql: str, params: tuple = ()) -> list[dict]:
         conn.close()
 
 
+@app.get("/api/fng")
+def fear_greed():
+    """
+    Proxy del índice Fear & Greed de alternative.me (gratuito, sin API key).
+    Se llama desde el navegador poco seguido (el índice se actualiza ~1 vez
+    al día), así que no hace falta cachearlo en disco como las imágenes.
+    """
+    try:
+        resp = requests.get("https://api.alternative.me/fng/?limit=1", timeout=5)
+        payload = resp.json()
+        item = payload["data"][0]
+        return {
+            "value": int(item["value"]),
+            "classification": item["value_classification"],
+            "timestamp": item.get("timestamp"),
+        }
+    except Exception:
+        raise HTTPException(status_code=502, detail="No se pudo obtener el índice Fear & Greed")
+
+
 @app.get("/api/health")
 def health():
     return {

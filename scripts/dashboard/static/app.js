@@ -172,8 +172,9 @@ function hexToRgba(hex, alpha) {
 let priceChart = null;
 let rsiThresholds = { alto: 70, bajo: 30 };
 let lastHistory = [];
-let newsCache = [];       // snapshot estable — no se reordena solo por auto-refresh
-let newsGridVisible = 9;  // paginación client-side del grid "Más noticias"
+let newsCache = [];          // snapshot estable — no se reordena solo por auto-refresh
+let newsGridVisible = 9;     // paginación client-side del grid "Más noticias"
+let currentNewsFilter = "all"; // "all" | "bitcoin" | "macro" | "regulacion" | "exchange" | "rumor"
 
 /* ============================================================
    Render: ticker
@@ -391,14 +392,17 @@ function renderNews(items) {
   const moreBtn = document.getElementById("btn-more-news");
 
   if (!items || !items.length) {
-    stripEl.innerHTML = `<div class="empty-state">Sin noticias recientes todavía.</div>`;
+    const msg = currentNewsFilter === "all"
+      ? "Sin noticias recientes todavía."
+      : "No hay noticias que coincidan con este filtro por ahora.";
+    stripEl.innerHTML = `<div class="empty-state">${msg}</div>`;
     featuredEl.innerHTML = "";
-    gridEl.innerHTML = `<div class="empty-state">Sin noticias recientes todavía.</div>`;
+    gridEl.innerHTML = `<div class="empty-state">${msg}</div>`;
     moreBtn.style.display = "none";
     return;
   }
 
-  countEl.textContent = `${items.length} noticias cargadas`;
+  countEl.textContent = `${items.length} noticias`;
 
   // Strip: las 8 más recientes
   stripEl.innerHTML = items.slice(0, 8).map(stripCardHtml).join("");
@@ -430,6 +434,62 @@ function renderNews(items) {
   } else {
     moreBtn.style.display = "none";
   }
+}
+
+/* ============================================================
+   Filtro rápido de noticias (chips)
+   ============================================================ */
+function newsMatchingFilter(filter) {
+  if (filter === "rumor") return newsCache.filter((i) => (i.is_rumor ?? isRumor(i.title)));
+  if (filter === "all") return newsCache;
+  return newsCache.filter((i) => i.category === filter);
+}
+
+// resetPagination=false se usa desde "Ver más noticias": no queremos que
+// cambiar de página reinicie el conteo visible.
+function applyNewsFilter({ resetPagination = true } = {}) {
+  if (resetPagination) newsGridVisible = 9;
+  renderNews(newsMatchingFilter(currentNewsFilter));
+}
+
+function initNewsFilters() {
+  const chips = document.querySelectorAll("#news-filters .chip");
+  chips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      currentNewsFilter = chip.dataset.filter;
+      chips.forEach((c) => c.classList.toggle("active", c === chip));
+      applyNewsFilter();
+    });
+  });
+}
+
+/* ============================================================
+   Fear & Greed Index
+   ============================================================ */
+async function loadFearGreed() {
+  const pill = document.getElementById("tk-fng");
+  const valueEl = document.getElementById("tk-fng-value");
+  try {
+    const data = await fetchJson("/api/fng");
+    valueEl.textContent = `${data.value} · ${translateFng(data.classification)}`;
+    pill.classList.remove("fng-fear", "fng-greed", "fng-neutral");
+    if (data.value <= 45) pill.classList.add("fng-fear");
+    else if (data.value >= 56) pill.classList.add("fng-greed");
+    else pill.classList.add("fng-neutral");
+  } catch (e) {
+    valueEl.textContent = "—";
+  }
+}
+
+function translateFng(classification) {
+  const map = {
+    "Extreme Fear": "Miedo extremo",
+    "Fear": "Miedo",
+    "Neutral": "Neutral",
+    "Greed": "Codicia",
+    "Extreme Greed": "Codicia extrema",
+  };
+  return map[classification] || classification;
 }
 
 function renderRumors(items) {
@@ -562,8 +622,7 @@ async function refresh() {
 async function loadNews() {
   try {
     newsCache = await fetchJson("/api/news?limit=90");
-    newsGridVisible = 9;
-    renderNews(newsCache);
+    applyNewsFilter(); // respeta el chip activo, si el usuario ya había filtrado
   } catch (e) {
     console.error(e);
     showSectionError("news-grid", "No se pudieron cargar las noticias.");
@@ -616,11 +675,15 @@ async function init() {
   document.getElementById("btn-refresh-news").addEventListener("click", refreshNewsClick);
   document.getElementById("btn-more-news").addEventListener("click", () => {
     newsGridVisible += 9;
-    renderNews(newsCache);
+    applyNewsFilter({ resetPagination: false });
   });
+  initNewsFilters();
 
-  await Promise.all([refresh(), loadNews()]);
+  await Promise.all([refresh(), loadNews(), loadFearGreed()]);
   setInterval(refresh, REFRESH_MS);
+  // El índice Fear & Greed se actualiza ~1 vez al día — no tiene sentido
+  // pedirlo cada 30s como el resto. Cada 10 min es más que suficiente.
+  setInterval(loadFearGreed, 10 * 60 * 1000);
 }
 
 window.refresh = refresh; // útil para depurar desde la consola

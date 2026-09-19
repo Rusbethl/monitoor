@@ -222,6 +222,12 @@ a { color: inherit; text-decoration: none; }
 .ticker-change.up   { color: var(--good); }
 .ticker-change.down { color: var(--critical); }
 
+.fng-pill { transition: background .3s ease; }
+.fng-pill .ticker-value { font-weight: 700; }
+.fng-pill.fng-fear    { color: var(--critical); }
+.fng-pill.fng-greed   { color: var(--good); }
+.fng-pill.fng-neutral { color: var(--ink-2); }
+
 .state-pill .state-dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--ink-muted);
@@ -281,6 +287,23 @@ a { color: inherit; text-decoration: none; }
   font-size: 12.5px;
 }
 
+/* Sección "Datos técnicos": deliberadamente más discreta — vive hasta abajo
+   porque es consulta opcional, no algo que necesites leer todos los días. */
+.section-secondary {
+  padding-top: 22px;
+  border-top: 1px solid var(--hairline);
+  opacity: 0.92;
+}
+.section-secondary h2 { font-size: 16px; }
+
+.panel-note {
+  margin: 0;
+  padding: 10px 16px 4px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
 .btn-refresh {
   margin-left: auto;
   display: inline-flex;
@@ -301,6 +324,43 @@ a { color: inherit; text-decoration: none; }
 .btn-refresh:active { transform: scale(0.96); }
 .btn-refresh.spinning .icon-refresh { animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   Filtros rápidos de noticias
+   ============================================================ */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.chip {
+  padding: 7px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .1s ease;
+}
+.chip:hover { border-color: var(--border-hover); color: var(--ink); }
+.chip:active { transform: scale(0.96); }
+
+.chip.active {
+  background: var(--ink);
+  color: var(--page);
+  border-color: var(--ink);
+}
+/* Cuando el filtro activo es de categoría, usamos su color en vez de blanco/negro puro */
+.chip.chip-bitcoin.active    { background: var(--cat-bitcoin);    color: #1a0f00; border-color: var(--cat-bitcoin); }
+.chip.chip-macro.active      { background: var(--cat-macro);      color: #05121f; border-color: var(--cat-macro); }
+.chip.chip-regulacion.active { background: var(--cat-regulacion); color: #0d0a1f; border-color: var(--cat-regulacion); }
+.chip.chip-exchange.active   { background: var(--cat-exchange);   color: #04140e; border-color: var(--cat-exchange); }
+.chip.chip-rumor.active      { background: var(--ink-2); color: var(--page); border-color: var(--ink-2); }
 
 /* ============================================================
    News: horizontal strip
