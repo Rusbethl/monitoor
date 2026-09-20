@@ -42,6 +42,13 @@ class Config:
     # Dashboard
     DASHBOARD_PORT = int(os.getenv("DASHBOARD_PORT", "8000"))
 
+    # Asistente (Claude) — opcional. Si se deja vacío, el botón de "Pregúntale
+    # al asistente" del dashboard muestra un mensaje explicando que falta
+    # configurar la clave, y el resto del proyecto sigue funcionando gratis
+    # como siempre (esto es lo único del proyecto que consume créditos de API).
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+    ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest")
+
     @property
     def postgres_dsn(self) -> str:
         return (

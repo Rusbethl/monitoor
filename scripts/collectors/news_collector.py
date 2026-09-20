@@ -1,6 +1,7 @@
 """
 Recolector de noticias vía RSS, filtrado por keywords relevantes para BTC:
-Fed/tasas, Trump/dólar, petróleo, geopolítica (Irán, etc.), y BTC/crypto directo.
+Fed/tasas/bancos centrales, dólar (DXY), geopolítica (guerras/conflictos/sanciones),
+petróleo, y BTC/crypto directo.
 
 No determina automáticamente "rumor" vs "confirmado" (eso requiere lectura humana
 o un LLM), pero sí clasifica la fuente como tipo "medio_formal" o "agregador_veloz"
@@ -15,35 +16,79 @@ import feedparser
 logger = logging.getLogger(__name__)
 
 # Fuentes RSS gratuitas. Se puede ampliar libremente.
+#
+# Nota sobre las nuevas fuentes (Al Jazeera, OilPrice.com, Investing.com
+# Forex/Economía): son feeds públicos conocidos, pero algunos sitios cambian
+# sus URLs de RSS sin aviso. El collector ya está diseñado para tolerar esto
+# — si una fuente falla o no devuelve nada, simplemente se ignora esa fuente
+# y el resto sigue funcionando (ver el try/except dentro de collect()).
 FEEDS = {
     "CoinDesk": "https://www.coindesk.com/arc/outboundfeeds/rss/",
     "CoinTelegraph": "https://cointelegraph.com/rss",
     "Reuters Business": "https://feeds.reuters.com/reuters/businessNews",
     "Investing.com Crypto": "https://www.investing.com/rss/news_301.rss",
+    # --- Nuevas fuentes: geopolítica, petróleo, dólar/tasas ---
+    "Al Jazeera (Mundo)": "https://www.aljazeera.com/xml/rss/all.xml",
+    "OilPrice.com": "https://oilprice.com/rss/main",
+    "Investing.com Commodities": "https://www.investing.com/rss/news_11.rss",
+    "Investing.com Forex": "https://www.investing.com/rss/news_285.rss",
+    "Investing.com Economía": "https://www.investing.com/rss/news_25.rss",
 }
 
 KEYWORDS = [
-    # Macro / Fed
+    # Macro / Fed / bancos centrales (ampliado más allá de la Fed)
     "fed", "federal reserve", "powell", "interest rate", "rate cut", "rate hike",
-    "fomc", "cpi", "ppi", "inflation", "jobs report", "nonfarm payrolls",
-    # Trump / dólar / geopolítica
-    "trump", "dollar", "tariff", "iran", "war", "sanctions", "oil price", "opec",
+    "rate decision", "monetary policy", "fomc", "cpi", "ppi", "inflation",
+    "jobs report", "nonfarm payrolls", "gdp", "recession", "quantitative easing",
+    "treasury yield", "bond yield",
+    "ecb", "european central bank", "lagarde", "boj", "bank of japan",
+    "pboc", "people's bank of china", "boe", "bank of england", "central bank",
+    # Dólar / DXY / divisas
+    "dollar", "dxy", "dollar index", "us dollar", "forex", "currency",
+    "yuan", "yen", "euro",
+    # Geopolítica / guerras / conflictos / sanciones
+    "trump", "tariff", "iran", "war", "sanctions", "ukraine", "russia",
+    "israel", "gaza", "taiwan", "military", "conflict", "ceasefire",
+    "missile", "airstrike", "invasion", "nato",
+    # Petróleo / materias primas energéticas
+    "oil price", "opec", "opec+", "brent", "wti", "crude oil", "barrel",
+    "energy prices",
     # BTC / crypto directo
     "bitcoin", "btc", "crypto", "etf", "blackrock", "microstrategy", "saylor",
     "sec", "binance", "liquidation", "whale",
 ]
 
 # Categorías para clasificar cada noticia (se usa para el ícono/color de la
-# tarjeta cuando el feed no trae imagen, y para el tag visible).
+# tarjeta cuando el feed no trae imagen, y para el tag/filtro visible).
+#
+# Orden importa: para una noticia que matchea varias categorías, gana la
+# primera de esta lista (bitcoin es lo más específico para este dashboard,
+# así que va primero).
 CATEGORY_KEYWORDS = {
     "bitcoin": ["bitcoin", "btc", "microstrategy", "saylor", "etf", "halving"],
-    "regulacion": ["sec", "regulat", "law", "legal", "tax", "ban", "government"],
-    "exchange": ["binance", "coinbase", "exchange", "liquidation", "whale", "hack"],
+    "geopolitica": [
+        "iran", "war", "sanctions", "ukraine", "russia", "israel", "gaza",
+        "taiwan", "military", "conflict", "ceasefire", "missile", "airstrike",
+        "invasion", "nato", "tariff",
+    ],
+    "petroleo": [
+        "oil price", "opec", "opec+", "brent", "wti", "crude oil", "barrel",
+        "energy prices",
+    ],
+    "dolar": [
+        "dollar", "dxy", "dollar index", "us dollar", "forex", "currency",
+        "yuan", "yen", "euro",
+    ],
     "macro": [
         "fed", "federal reserve", "powell", "interest rate", "rate cut", "rate hike",
-        "fomc", "cpi", "ppi", "inflation", "jobs report", "nonfarm payrolls",
-        "trump", "dollar", "tariff", "iran", "war", "sanctions", "oil price", "opec",
+        "rate decision", "monetary policy", "fomc", "cpi", "ppi", "inflation",
+        "jobs report", "nonfarm payrolls", "gdp", "recession", "quantitative easing",
+        "treasury yield", "bond yield", "ecb", "european central bank", "lagarde",
+        "boj", "bank of japan", "pboc", "people's bank of china", "boe",
+        "bank of england", "central bank",
     ],
+    "regulacion": ["sec", "regulat", "law", "legal", "tax", "ban", "government"],
+    "exchange": ["binance", "coinbase", "exchange", "liquidation", "whale", "hack"],
 }
 
 

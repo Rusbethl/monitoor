@@ -32,11 +32,14 @@
   --shadow-rest:  0 1px 2px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.02) inset;
   --shadow-hover: 0 14px 28px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03) inset;
 
-  --cat-bitcoin:    #d95926;
-  --cat-macro:      #3987e5;
-  --cat-regulacion: #9085e9;
-  --cat-exchange:   #199e70;
-  --cat-general:    #898781;
+  --cat-bitcoin:     #d95926;
+  --cat-macro:       #3987e5;
+  --cat-geopolitica: #d9463e;
+  --cat-petroleo:    #a9793f;
+  --cat-dolar:       #3ecb61;
+  --cat-regulacion:  #9085e9;
+  --cat-exchange:    #199e70;
+  --cat-general:     #898781;
 }
 
 /* --- Claro --- */
@@ -55,11 +58,14 @@
   --shadow-rest:  0 1px 2px rgba(11,11,11,0.06);
   --shadow-hover: 0 12px 26px rgba(11,11,11,0.12);
 
-  --cat-bitcoin:    #eb6834;
-  --cat-macro:      #2a78d6;
-  --cat-regulacion: #4a3aa7;
-  --cat-exchange:   #1baf7a;
-  --cat-general:    #7a7972;
+  --cat-bitcoin:     #eb6834;
+  --cat-macro:       #2a78d6;
+  --cat-geopolitica: #c23b32;
+  --cat-petroleo:    #8a6530;
+  --cat-dolar:       #2f9e4c;
+  --cat-regulacion:  #4a3aa7;
+  --cat-exchange:    #1baf7a;
+  --cat-general:     #7a7972;
 }
 
 /* --- Azul noche --- */
@@ -78,11 +84,14 @@
   --shadow-rest:  0 1px 2px rgba(0,0,0,0.4);
   --shadow-hover: 0 14px 28px rgba(0,0,0,0.5);
 
-  --cat-bitcoin:    #e8863d;
-  --cat-macro:      #5aa4ff;
-  --cat-regulacion: #9085e9;
-  --cat-exchange:   #34c19a;
-  --cat-general:    #7683a8;
+  --cat-bitcoin:     #e8863d;
+  --cat-macro:       #5aa4ff;
+  --cat-geopolitica: #ff6b5e;
+  --cat-petroleo:    #c9a06a;
+  --cat-dolar:       #4ee081;
+  --cat-regulacion:  #9085e9;
+  --cat-exchange:    #34c19a;
+  --cat-general:     #7683a8;
 }
 
 /* --- Ámbar terminal (guiño a Bloomberg) --- */
@@ -101,11 +110,14 @@
   --shadow-rest:  0 1px 2px rgba(0,0,0,0.4);
   --shadow-hover: 0 14px 28px rgba(0,0,0,0.5);
 
-  --cat-bitcoin:    #ffb454;
-  --cat-macro:      #e8a33d;
-  --cat-regulacion: #c98d3f;
-  --cat-exchange:   #f0c265;
-  --cat-general:    #8f7550;
+  --cat-bitcoin:     #ffb454;
+  --cat-macro:       #e8a33d;
+  --cat-geopolitica: #ff7a5c;
+  --cat-petroleo:    #d4a25c;
+  --cat-dolar:       #9ed46a;
+  --cat-regulacion:  #c98d3f;
+  --cat-exchange:    #f0c265;
+  --cat-general:     #8f7550;
 }
 
 * { box-sizing: border-box; }
@@ -326,6 +338,221 @@ a { color: inherit; text-decoration: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ============================================================
+   Asistente (Claude) — botón flotante + panel de chat
+   Cerrado por defecto: es la única parte del proyecto que gasta créditos
+   de API, así que se abre solo si el usuario lo pide.
+   ============================================================ */
+.assistant-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--cat-macro), #7b5cff);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.08) inset;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.assistant-fab:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+.assistant-fab:active { transform: scale(0.95); }
+.assistant-fab-icon { font-size: 22px; line-height: 1; }
+.assistant-fab.is-active {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+.assistant-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 92px;
+  z-index: 40;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  height: 540px;
+  max-height: calc(100vh - 130px);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  overflow: hidden;
+  animation: assistant-in .18s ease both;
+}
+/* El atributo HTML `hidden` por sí solo pierde contra `.assistant-panel{display:flex}`
+   (misma especificidad, y esta regla va después en la hoja de estilos), así que sin
+   esto el panel nunca se ocultaba de verdad al "cerrarlo". */
+.assistant-panel[hidden] { display: none; }
+@keyframes assistant-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.assistant-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.assistant-panel-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.assistant-panel-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--cat-macro), #7b5cff);
+  flex-shrink: 0;
+}
+.assistant-panel-name { font-weight: 700; font-size: 13.5px; }
+.assistant-panel-sub { font-size: 11px; color: var(--ink-muted); }
+.assistant-close {
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s ease, color .12s ease;
+  flex-shrink: 0;
+}
+.assistant-close:hover { background: var(--surface-3); color: var(--ink); }
+
+.assistant-log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+
+.assistant-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px 6px;
+}
+.assistant-suggestion-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  margin-bottom: 2px;
+}
+.assistant-suggestion {
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+.assistant-suggestion:hover {
+  border-color: var(--border-hover);
+  color: var(--ink);
+  background: var(--surface-3);
+}
+
+.assistant-msg {
+  max-width: 88%;
+  padding: 10px 13px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  animation: card-in .2s ease both;
+}
+.assistant-msg-user {
+  align-self: flex-end;
+  background: linear-gradient(135deg, var(--cat-macro), #7b5cff);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.assistant-msg-assistant {
+  align-self: flex-start;
+  background: var(--surface-3);
+  color: var(--ink);
+  border-bottom-left-radius: 4px;
+}
+.assistant-msg-pending { color: var(--ink-muted); font-style: italic; }
+.assistant-msg-error {
+  background: color-mix(in srgb, var(--critical) 18%, var(--surface-3));
+  color: var(--critical);
+}
+
+.assistant-form {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--hairline);
+  flex-shrink: 0;
+}
+
+.assistant-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s ease;
+}
+.assistant-input:focus { border-color: var(--border-hover); }
+.assistant-input:disabled { opacity: 0.6; }
+
+.assistant-send {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--ink);
+  color: var(--page);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .15s ease, transform .1s ease;
+}
+.assistant-send:hover { opacity: 0.88; }
+.assistant-send:active { transform: scale(0.92); }
+.assistant-send:disabled { opacity: 0.5; cursor: default; }
+
+@media (max-width: 620px) {
+  .assistant-fab { right: 16px; bottom: 16px; }
+  .assistant-panel {
+    right: 8px;
+    left: 8px;
+    bottom: 84px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+/* ============================================================
    Filtros rápidos de noticias
    ============================================================ */
 .filter-chips {
@@ -356,11 +583,14 @@ a { color: inherit; text-decoration: none; }
   border-color: var(--ink);
 }
 /* Cuando el filtro activo es de categoría, usamos su color en vez de blanco/negro puro */
-.chip.chip-bitcoin.active    { background: var(--cat-bitcoin);    color: #1a0f00; border-color: var(--cat-bitcoin); }
-.chip.chip-macro.active      { background: var(--cat-macro);      color: #05121f; border-color: var(--cat-macro); }
-.chip.chip-regulacion.active { background: var(--cat-regulacion); color: #0d0a1f; border-color: var(--cat-regulacion); }
-.chip.chip-exchange.active   { background: var(--cat-exchange);   color: #04140e; border-color: var(--cat-exchange); }
-.chip.chip-rumor.active      { background: var(--ink-2); color: var(--page); border-color: var(--ink-2); }
+.chip.chip-bitcoin.active     { background: var(--cat-bitcoin);     color: #1a0f00; border-color: var(--cat-bitcoin); }
+.chip.chip-macro.active       { background: var(--cat-macro);       color: #05121f; border-color: var(--cat-macro); }
+.chip.chip-geopolitica.active { background: var(--cat-geopolitica); color: #200705; border-color: var(--cat-geopolitica); }
+.chip.chip-petroleo.active    { background: var(--cat-petroleo);    color: #1a1206; border-color: var(--cat-petroleo); }
+.chip.chip-dolar.active       { background: var(--cat-dolar);       color: #04170b; border-color: var(--cat-dolar); }
+.chip.chip-regulacion.active  { background: var(--cat-regulacion);  color: #0d0a1f; border-color: var(--cat-regulacion); }
+.chip.chip-exchange.active    { background: var(--cat-exchange);    color: #04140e; border-color: var(--cat-exchange); }
+.chip.chip-rumor.active       { background: var(--ink-2); color: var(--page); border-color: var(--ink-2); }
 
 /* ============================================================
    News: horizontal strip
@@ -425,11 +655,14 @@ a { color: inherit; text-decoration: none; }
   padding: 3px 8px;
   border-radius: 6px;
 }
-.tag-bitcoin    { color: var(--cat-bitcoin);    background: color-mix(in srgb, var(--cat-bitcoin) 16%, transparent); }
-.tag-macro      { color: var(--cat-macro);      background: color-mix(in srgb, var(--cat-macro) 16%, transparent); }
-.tag-regulacion { color: var(--cat-regulacion); background: color-mix(in srgb, var(--cat-regulacion) 16%, transparent); }
-.tag-exchange   { color: var(--cat-exchange);   background: color-mix(in srgb, var(--cat-exchange) 16%, transparent); }
-.tag-general    { color: var(--cat-general);    background: color-mix(in srgb, var(--cat-general) 16%, transparent); }
+.tag-bitcoin     { color: var(--cat-bitcoin);     background: color-mix(in srgb, var(--cat-bitcoin) 16%, transparent); }
+.tag-macro       { color: var(--cat-macro);       background: color-mix(in srgb, var(--cat-macro) 16%, transparent); }
+.tag-geopolitica { color: var(--cat-geopolitica); background: color-mix(in srgb, var(--cat-geopolitica) 16%, transparent); }
+.tag-petroleo    { color: var(--cat-petroleo);    background: color-mix(in srgb, var(--cat-petroleo) 16%, transparent); }
+.tag-dolar       { color: var(--cat-dolar);       background: color-mix(in srgb, var(--cat-dolar) 16%, transparent); }
+.tag-regulacion  { color: var(--cat-regulacion);  background: color-mix(in srgb, var(--cat-regulacion) 16%, transparent); }
+.tag-exchange    { color: var(--cat-exchange);    background: color-mix(in srgb, var(--cat-exchange) 16%, transparent); }
+.tag-general     { color: var(--cat-general);     background: color-mix(in srgb, var(--cat-general) 16%, transparent); }
 
 .badge-impact {
   display: inline-flex;
@@ -691,11 +924,14 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    Placeholder thumbnails (sin imagen del feed, o si falló la carga)
    ============================================================ */
-.ph-bitcoin    { background: radial-gradient(120% 140% at 20% 0%, #4a2712, #1a1a19); }
-.ph-macro      { background: radial-gradient(120% 140% at 20% 0%, #12253f, #1a1a19); }
-.ph-regulacion { background: radial-gradient(120% 140% at 20% 0%, #241f42, #1a1a19); }
-.ph-exchange   { background: radial-gradient(120% 140% at 20% 0%, #0f2e24, #1a1a19); }
-.ph-general    { background: radial-gradient(120% 140% at 20% 0%, #232322, #1a1a19); }
+.ph-bitcoin     { background: radial-gradient(120% 140% at 20% 0%, #4a2712, #1a1a19); }
+.ph-macro       { background: radial-gradient(120% 140% at 20% 0%, #12253f, #1a1a19); }
+.ph-geopolitica { background: radial-gradient(120% 140% at 20% 0%, #3a1512, #1a1a19); }
+.ph-petroleo    { background: radial-gradient(120% 140% at 20% 0%, #2e2412, #1a1a19); }
+.ph-dolar       { background: radial-gradient(120% 140% at 20% 0%, #0f3320, #1a1a19); }
+.ph-regulacion  { background: radial-gradient(120% 140% at 20% 0%, #241f42, #1a1a19); }
+.ph-exchange    { background: radial-gradient(120% 140% at 20% 0%, #0f2e24, #1a1a19); }
+.ph-general     { background: radial-gradient(120% 140% at 20% 0%, #232322, #1a1a19); }
 
 .ph-icon {
   position: absolute;
@@ -714,10 +950,14 @@ a { color: inherit; text-decoration: none; }
 }
 .strip-thumb.ph-bitcoin .ph-icon,
 .strip-thumb.ph-macro .ph-icon,
+.strip-thumb.ph-geopolitica .ph-icon,
+.strip-thumb.ph-petroleo .ph-icon,
+.strip-thumb.ph-dolar .ph-icon,
 .strip-thumb.ph-regulacion .ph-icon,
 .strip-thumb.ph-exchange .ph-icon,
 .strip-thumb.ph-general .ph-icon { font-size: 24px; }
-.list-thumb.ph-bitcoin, .list-thumb.ph-macro, .list-thumb.ph-regulacion,
+.list-thumb.ph-bitcoin, .list-thumb.ph-macro, .list-thumb.ph-geopolitica,
+.list-thumb.ph-petroleo, .list-thumb.ph-dolar, .list-thumb.ph-regulacion,
 .list-thumb.ph-exchange, .list-thumb.ph-general { position: relative; }
 .list-thumb .ph-icon { font-size: 20px; }
 
@@ -909,4 +1149,5 @@ a { color: inherit; text-decoration: none; }
   .topbar { padding: 12px 16px; flex-wrap: wrap; }
   .layout { padding: 20px 16px 50px; }
   .news-grid { grid-template-columns: 1fr; }
+  .assistant-msg { max-width: 95%; }
 }

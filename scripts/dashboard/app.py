@@ -1,7 +1,12 @@
 """
-Backend del dashboard: una API mínima (FastAPI) que solo LEE de Postgres
-y sirve el frontend estático. No escribe nada, no llama a ninguna IA —
-es un visor de lo que el collector ya recolectó.
+Backend del dashboard: una API mínima (FastAPI) que en su mayoría solo LEE
+de Postgres y sirve el frontend estático.
+
+La única excepción es /api/ask: un endpoint opcional que le pasa a Claude
+(vía API, si configuraste ANTHROPIC_API_KEY en .env) el contexto ya
+recolectado por este mismo proyecto (noticias, snapshot de mercado, calendario,
+alertas) junto con tu pregunta en lenguaje natural. Es la única parte de este
+proyecto que consume créditos de API — todo lo demás sigue siendo gratis.
 """
 import hashlib
 import logging
@@ -14,6 +19,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
+from pydantic import BaseModel
 
 from common.config import config
 
@@ -94,6 +100,7 @@ def health():
         "symbol": config.BINANCE_SYMBOL,
         "rsi_sobrecompra": config.RSI_SOBRECOMPRA,
         "rsi_sobreventa": config.RSI_SOBREVENTA,
+        "asistente_configurado": bool(config.ANTHROPIC_API_KEY),
     }
 
 
@@ -244,6 +251,143 @@ def proxy_image(u: str):
     path = THUMBS_DIR / f"{digest}.{ext}"
     path.write_bytes(resp.content)
     return Response(content=resp.content, media_type=content_type, headers={"Cache-Control": "public, max-age=604800"})
+
+
+# ============================================================
+# Asistente (Claude) — único endpoint que llama a una IA y consume créditos.
+# ============================================================
+
+ASK_SYSTEM_PROMPT = (
+    "Eres un asistente que ayuda a un trader de futuros de BTC/USDT que opera a corto plazo "
+    "con apalancamiento muy alto (entre 44x y 55x) a interpretar las noticias, datos de mercado "
+    "y eventos que este dashboard ya recolectó automáticamente. Responde siempre en español, de "
+    "forma clara, directa y útil para tomar decisiones de trading — nada de relleno. Cuando te "
+    "pidan 'las noticias más importantes' o 'qué me ayudaría a decidir', prioriza por: qué tan "
+    "reciente es cada cosa, qué tanto podría mover el precio de BTC (macro/geopolítica/petróleo "
+    "suelen pesar más que noticias menores de un solo exchange), y si es un rumor sin confirmar "
+    "(dilo explícitamente cuando lo sea, no lo trates como hecho). Nunca inventes datos que no "
+    "estén en el contexto que se te da — si algo no está ahí, dilo abiertamente en vez de "
+    "adivinar. No des garantías de dirección de precio: el mercado puede moverse en cualquier "
+    "sentido y esto es solo apoyo de contexto y de gestión de riesgo, no una señal de compra o "
+    "venta. Sé breve pero completo, y usa viñetas cuando eso ayude a la claridad."
+)
+
+
+class AskIn(BaseModel):
+    question: str
+
+
+def _recent_context() -> str:
+    """Arma un resumen en texto plano de lo último que este proyecto ya
+    recolectó, para dárselo a Claude como contexto junto con la pregunta."""
+    news_rows = query(
+        """
+        SELECT ts, source, title, category, is_rumor
+        FROM news_items
+        ORDER BY ts DESC
+        LIMIT 25
+        """
+    )
+    snapshot_rows = query(
+        """
+        SELECT ts, price, funding_rate, open_interest, long_short_ratio,
+               rsi_15m, rsi_1h, rsi_4h, ema_50_1h, ema_200_1h
+        FROM market_snapshots
+        ORDER BY ts DESC
+        LIMIT 1
+        """
+    )
+    calendar_rows = query(
+        """
+        SELECT event_date, title, category, impact
+        FROM economic_events
+        WHERE event_date >= now() - interval '1 day'
+        ORDER BY event_date ASC
+        LIMIT 6
+        """
+    )
+    alert_rows = query(
+        """
+        SELECT ts, alert_type, message
+        FROM alerts_log
+        ORDER BY ts DESC
+        LIMIT 8
+        """
+    )
+
+    lines = ["=== Noticias recientes (más nueva primero) ==="]
+    if news_rows:
+        for r in news_rows:
+            rumor_tag = " [RUMOR, sin confirmar]" if r["is_rumor"] else ""
+            lines.append(f"- ({r['category']}) {r['title']} — {r['source']}{rumor_tag}")
+    else:
+        lines.append("(sin noticias recientes en la base de datos todavía)")
+
+    lines.append("\n=== Snapshot de mercado más reciente ===")
+    if snapshot_rows:
+        s = snapshot_rows[0]
+        lines.append(
+            f"Precio: {s['price']} | Funding: {s['funding_rate']} | "
+            f"Open Interest: {s['open_interest']} | Long/Short: {s['long_short_ratio']} | "
+            f"RSI 15m/1h/4h: {s['rsi_15m']}/{s['rsi_1h']}/{s['rsi_4h']} | "
+            f"EMA50/EMA200 (1h): {s['ema_50_1h']}/{s['ema_200_1h']}"
+        )
+    else:
+        lines.append("(sin snapshot de mercado todavía)")
+
+    lines.append("\n=== Próximos eventos económicos ===")
+    if calendar_rows:
+        for c in calendar_rows:
+            lines.append(f"- {c['event_date']}: {c['title']} ({c['category']}, impacto {c['impact']})")
+    else:
+        lines.append("(sin eventos próximos cargados)")
+
+    lines.append("\n=== Alertas técnicas recientes ===")
+    if alert_rows:
+        for a in alert_rows:
+            lines.append(f"- {a['ts']}: [{a['alert_type']}] {a['message']}")
+    else:
+        lines.append("(sin alertas recientes)")
+
+    return "\n".join(lines)
+
+
+@app.post("/api/ask")
+def ask(payload: AskIn):
+    if not config.ANTHROPIC_API_KEY:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Falta configurar ANTHROPIC_API_KEY en el archivo .env para usar el asistente. "
+                "Copia tu clave del Claude Console y agrégala ahí (mira .env.example)."
+            ),
+        )
+    question = (payload.question or "").strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Escribe una pregunta.")
+
+    import anthropic  # import perezoso: si falta la librería, solo afecta a este endpoint
+
+    context_block = _recent_context()
+    user_message = (
+        f"Contexto recolectado por el dashboard ahora mismo:\n\n{context_block}\n\n"
+        f"Pregunta del usuario: {question}"
+    )
+
+    try:
+        client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+        response = client.messages.create(
+            model=config.ANTHROPIC_MODEL,
+            max_tokens=1000,
+            system=ASK_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_message}],
+        )
+        text = "".join(getattr(block, "text", "") for block in response.content)
+    except Exception as exc:
+        logger.exception("Error llamando a Claude en /api/ask")
+        raise HTTPException(status_code=502, detail=f"No se pudo obtener respuesta del asistente: {exc}")
+
+    return {"answer": text.strip()}
 
 
 # Frontend estático (debe ir al final para no tapar las rutas /api/*)

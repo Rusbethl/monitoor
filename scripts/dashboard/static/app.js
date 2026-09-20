@@ -6,17 +6,21 @@
 const REFRESH_MS = 30_000;
 
 const CATEGORY_META = {
-  bitcoin:    { label: "Bitcoin",    icon: "₿", tag: "tag-bitcoin",    ph: "ph-bitcoin" },
-  macro:      { label: "Macro",      icon: "🌐", tag: "tag-macro",      ph: "ph-macro" },
-  regulacion: { label: "Regulación", icon: "⚖️", tag: "tag-regulacion", ph: "ph-regulacion" },
-  exchange:   { label: "Exchange",   icon: "🔁", tag: "tag-exchange",   ph: "ph-exchange" },
-  general:    { label: "Noticia",    icon: "📰", tag: "tag-general",    ph: "ph-general" },
+  bitcoin:     { label: "Bitcoin",         icon: "₿",  tag: "tag-bitcoin",     ph: "ph-bitcoin" },
+  macro:       { label: "Bancos centrales",icon: "🌐", tag: "tag-macro",       ph: "ph-macro" },
+  geopolitica: { label: "Geopolítica",     icon: "🌍", tag: "tag-geopolitica", ph: "ph-geopolitica" },
+  petroleo:    { label: "Petróleo",        icon: "🛢️", tag: "tag-petroleo",    ph: "ph-petroleo" },
+  dolar:       { label: "Dólar",           icon: "💵", tag: "tag-dolar",       ph: "ph-dolar" },
+  regulacion:  { label: "Regulación",      icon: "⚖️", tag: "tag-regulacion",  ph: "ph-regulacion" },
+  exchange:    { label: "Exchange",        icon: "🔁", tag: "tag-exchange",    ph: "ph-exchange" },
+  general:     { label: "Noticia",         icon: "📰", tag: "tag-general",     ph: "ph-general" },
 };
 
 const HIGH_IMPACT_KW = [
   "fomc", "fed", "powell", "rate cut", "rate hike", "cpi", "etf approval",
   "sec", "ban", "hack", "liquidation", "war", "sanctions", "bankruptcy",
-  "halving", "blackrock", "emergency",
+  "halving", "blackrock", "emergency", "opec", "opec+", "ecb", "boj",
+  "dxy", "invasion", "ceasefire", "missile", "airstrike",
 ];
 const BULLISH_KW = ["surge", "rally", "approval", "approved", "record", "bullish", "gain", "soar", "buy", "inflow"];
 const BEARISH_KW = ["crash", "ban", "hack", "bearish", "drop", "plunge", "sell-off", "selloff", "lawsuit", "outflow", "liquidation"];
@@ -174,7 +178,8 @@ let rsiThresholds = { alto: 70, bajo: 30 };
 let lastHistory = [];
 let newsCache = [];          // snapshot estable — no se reordena solo por auto-refresh
 let newsGridVisible = 9;     // paginación client-side del grid "Más noticias"
-let currentNewsFilter = "all"; // "all" | "bitcoin" | "macro" | "regulacion" | "exchange" | "rumor"
+let currentNewsFilter = "all"; // "all" | "bitcoin" | "macro" | "geopolitica" | "petroleo" | "dolar" | "regulacion" | "exchange" | "rumor"
+let assistantBusy = false;
 
 /* ============================================================
    Render: ticker
@@ -571,6 +576,103 @@ function renderCalendar(items) {
 }
 
 /* ============================================================
+   Asistente (Claude) — chat de una sola pregunta por turno
+   ============================================================ */
+function assistantAppend(role, text, opts = {}) {
+  const log = document.getElementById("assistant-log");
+  const empty = document.getElementById("assistant-empty");
+  if (empty) empty.remove();
+
+  const bubble = document.createElement("div");
+  bubble.className = `assistant-msg assistant-msg-${role}${opts.error ? " assistant-msg-error" : ""}`;
+  if (opts.pending) bubble.classList.add("assistant-msg-pending");
+  bubble.textContent = text;
+  log.appendChild(bubble);
+  log.scrollTop = log.scrollHeight;
+  return bubble;
+}
+
+async function assistantAsk(question) {
+  if (assistantBusy) return;
+  assistantBusy = true;
+
+  const sendBtn = document.getElementById("assistant-send");
+  const input = document.getElementById("assistant-input");
+  sendBtn.disabled = true;
+  input.disabled = true;
+
+  assistantAppend("user", question);
+  const pending = assistantAppend("assistant", "Pensando…", { pending: true });
+
+  try {
+    const res = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "No se pudo obtener respuesta.");
+    pending.textContent = data.answer;
+    pending.classList.remove("assistant-msg-pending");
+  } catch (e) {
+    pending.textContent = e.message || "No se pudo obtener respuesta del asistente.";
+    pending.classList.remove("assistant-msg-pending");
+    pending.classList.add("assistant-msg-error");
+  } finally {
+    assistantBusy = false;
+    sendBtn.disabled = false;
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+function setAssistantOpen(open) {
+  const panel = document.getElementById("assistant-panel");
+  const fab = document.getElementById("assistant-fab");
+  panel.hidden = !open;
+  fab.setAttribute("aria-expanded", String(open));
+  fab.classList.toggle("is-active", open);
+  if (open) {
+    document.getElementById("assistant-input").focus();
+  }
+}
+
+function initAssistant() {
+  const form = document.getElementById("assistant-form");
+  const input = document.getElementById("assistant-input");
+  const fab = document.getElementById("assistant-fab");
+  const closeBtn = document.getElementById("assistant-close");
+  const log = document.getElementById("assistant-log");
+
+  fab.addEventListener("click", () => {
+    const panel = document.getElementById("assistant-panel");
+    setAssistantOpen(panel.hidden);
+  });
+  closeBtn.addEventListener("click", () => setAssistantOpen(false));
+
+  // Cerrar con Escape, solo si el panel está abierto.
+  document.addEventListener("keydown", (e) => {
+    const panel = document.getElementById("assistant-panel");
+    if (e.key === "Escape" && !panel.hidden) setAssistantOpen(false);
+  });
+
+  // Sugerencias iniciales: un clic las pregunta directo.
+  log.addEventListener("click", (e) => {
+    const btn = e.target.closest(".assistant-suggestion");
+    if (!btn) return;
+    assistantAsk(btn.dataset.q);
+  });
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = "";
+    assistantAsk(question);
+  });
+}
+
+/* ============================================================
    Refresh orquestador
    ============================================================ */
 function showSectionError(elId, msg = "No se pudo cargar esta sección.") {
@@ -678,6 +780,7 @@ async function init() {
     applyNewsFilter({ resetPagination: false });
   });
   initNewsFilters();
+  initAssistant();
 
   await Promise.all([refresh(), loadNews(), loadFearGreed()]);
   setInterval(refresh, REFRESH_MS);

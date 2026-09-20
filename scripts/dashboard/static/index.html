@@ -79,7 +79,10 @@
       <div class="filter-chips" id="news-filters">
         <button class="chip active" data-filter="all">Todas</button>
         <button class="chip chip-bitcoin" data-filter="bitcoin">₿ Bitcoin</button>
-        <button class="chip chip-macro" data-filter="macro">🌐 Macro</button>
+        <button class="chip chip-macro" data-filter="macro">🌐 Bancos centrales</button>
+        <button class="chip chip-geopolitica" data-filter="geopolitica">🌍 Geopolítica</button>
+        <button class="chip chip-petroleo" data-filter="petroleo">🛢️ Petróleo</button>
+        <button class="chip chip-dolar" data-filter="dolar">💵 Dólar</button>
         <button class="chip chip-regulacion" data-filter="regulacion">⚖️ Regulación</button>
         <button class="chip chip-exchange" data-filter="exchange">🔁 Exchange</button>
         <button class="chip chip-rumor" data-filter="rumor">🗣️ Rumores</button>
@@ -214,6 +217,48 @@
   <footer class="footer">
     <span>BTC Monitor — datos locales, actualización automática. No es asesoría financiera.</span>
   </footer>
+
+  <!-- ===== Asistente (Claude) — flotante, cerrado por defecto =====
+       Único punto de este proyecto que consume créditos de API; por eso no
+       se abre solo, es opt-in con el botón. -->
+  <button class="assistant-fab" id="assistant-fab" title="Abrir asistente" aria-expanded="false">
+    <span class="assistant-fab-icon">✨</span>
+  </button>
+
+  <div class="assistant-panel" id="assistant-panel" hidden>
+    <div class="assistant-panel-head">
+      <div class="assistant-panel-title">
+        <span class="assistant-panel-dot"></span>
+        <div>
+          <div class="assistant-panel-name">Asistente</div>
+          <div class="assistant-panel-sub">Usa tu crédito de Claude Console</div>
+        </div>
+      </div>
+      <button class="assistant-close" id="assistant-close" title="Cerrar" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="assistant-log" id="assistant-log">
+      <div class="assistant-empty" id="assistant-empty">
+        <div class="assistant-suggestion-label">Prueba preguntando</div>
+        <button type="button" class="assistant-suggestion" data-q="Redáctame las noticias más importantes de las últimas horas">Noticias más importantes de las últimas horas</button>
+        <button type="button" class="assistant-suggestion" data-q="De todo lo recolectado hoy, ¿qué me ayudaría a decidir mi trading ahora mismo?">Qué me ayudaría a decidir mi trading ahora</button>
+        <button type="button" class="assistant-suggestion" data-q="¿Hay algún rumor o noticia sin confirmar que deba tener en cuenta?">Rumores sin confirmar que deba vigilar</button>
+      </div>
+    </div>
+
+    <form class="assistant-form" id="assistant-form">
+      <input
+        type="text"
+        id="assistant-input"
+        class="assistant-input"
+        placeholder="Escribe tu pregunta…"
+        autocomplete="off"
+      />
+      <button type="submit" class="assistant-send" id="assistant-send" title="Enviar" aria-label="Enviar">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3.4 20.6l17.45-8.32a1 1 0 000-1.8L3.4 2.16a1 1 0 00-1.4 1.1l1.9 7.24 10.7 1.5-10.7 1.5-1.9 7.24a1 1 0 001.4 1.1z"/></svg>
+      </button>
+    </form>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="/static/app.js"></script>
